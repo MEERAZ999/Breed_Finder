@@ -1,0 +1,31 @@
+{% extends 'breed_finder/base.html' %}
+
+{% block title %}Email Verification Failed{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    <h2 class="card-title text-danger mb-4">Email Verification Failed</h2>
+                    <div class="mb-4">
+                        <i class="fas fa-times-circle text-danger" style="font-size: 5rem;"></i>
+                    </div>
+                    <p class="card-text">We couldn't verify your email address. This could be due to:</p>
+                    <ul class="list-group list-group-flush mb-4 text-start">
+                        <li class="list-group-item">The verification link has expired (valid for 1 hour)</li>
+                        <li class="list-group-item">The verification link is invalid or has been tampered with</li>
+                        <li class="list-group-item">Your account has already been verified</li>
+                    </ul>
+                    <p class="card-text">Please try registering again or contact support if the problem persists.</p>
+                    <div class="mt-4">
+                        <a href="{% url 'breed_finder:register' %}" class="btn btn-primary me-2">Register Again</a>
+                        <a href="{% url 'breed_finder:login' %}" class="btn btn-outline-secondary">Log In</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

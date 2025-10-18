@@ -1,0 +1,17 @@
+Welcome to Dog Breed Finder!
+
+Hello {{ user.username }},
+
+Thank you for registering with Dog Breed Finder. To complete your registration and verify your email address, please click the link below:
+
+{{ link }}
+
+This verification link will expire in 1 hour.
+
+If you didn't create an account with Dog Breed Finder, you can safely ignore this email.
+
+Best regards,
+Dog Breed Finder Team
+
+This is an automated email. Please do not reply to this message.
+© 2024 Dog Breed Finder. All rights reserved.

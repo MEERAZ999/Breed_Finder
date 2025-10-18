@@ -1,0 +1,92 @@
+{% extends 'payment/base.html' %}
+{% load static %}
+
+{% block title %}Development Payment Success{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    .success-icon {
+        font-size: 5rem;
+        color: #28a745;
+        margin-bottom: 1rem;
+    }
+    .dev-badge {
+        display: inline-block;
+        background-color: #ffc107;
+        color: #212529;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+    .payment-details {
+        margin: 2rem 0;
+        text-align: left;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    .payment-details dl {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 0.5rem;
+    }
+    .payment-details dt {
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="success-container">
+    <div class="dev-badge">DEVELOPMENT MODE</div>
+    <i class="fas fa-check-circle success-icon"></i>
+    <h1>Payment Successful!</h1>
+    <p class="lead">This is a simulated payment in development mode.</p>
+    
+    <div class="payment-details">
+        <h4>Payment Details</h4>
+        <dl>
+            <dt>Payment ID:</dt>
+            <dd>{{ payment.id }}</dd>
+            
+            <dt>Amount:</dt>
+            <dd>NPR {{ payment.amount }}</dd>
+            
+            <dt>Transaction ID:</dt>
+            <dd>{{ payment.transaction_code }}</dd>
+            
+            <dt>Payment Method:</dt>
+            <dd>{{ payment.payment_method }}</dd>
+            
+            <dt>Status:</dt>
+            <dd>{{ payment.payment_status }}</dd>
+            
+            <dt>Date:</dt>
+            <dd>{{ payment.updated_at }}</dd>
+        </dl>
+    </div>
+    
+    <p>In a production environment, this would represent a real payment through eSewa.</p>
+    
+    <div class="mt-4">
+        <a href="{% url 'breed_finder:landing' %}" class="btn btn-primary">Return to Home</a>
+        {% if payment.pet %}
+        <a href="{% url 'breed_finder:pet_detail' pet_id=payment.pet.id %}" class="btn btn-outline-primary ml-2">View Pet</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+{% endblock %}

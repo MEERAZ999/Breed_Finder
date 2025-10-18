@@ -1,0 +1,137 @@
+{% extends 'breed_finder/base.html' %}
+
+{% block title %}My Profile - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Profile Information</h4>
+                </div>
+                <div class="card-body text-center">
+                    {% if user.profile.profile_picture %}
+                        <img src="{{ user.profile.profile_picture.url }}" alt="Profile Picture" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">
+                    {% else %}
+                        <div class="bg-light rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 150px; height: 150px;">
+                            <i class="fas fa-user fa-5x text-secondary"></i>
+                        </div>
+                    {% endif %}
+                    <h5>{{ user.username }}</h5>
+                    <p class="text-muted">{{ user.email }}</p>
+                    <p>{{ user.profile.bio|default:"No bio provided" }}</p>
+                    <div class="mt-3">
+                        <a href="{% url 'breed_finder:edit_profile' %}" class="btn btn-outline-primary">Edit Profile</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Contact Information</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-phone me-2"></i> Phone</span>
+                            <span>{{ user.profile.phone_number|default:"Not provided" }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-map-marker-alt me-2"></i> Address</span>
+                            <span>{{ user.profile.address|default:"Not provided" }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-calendar-alt me-2"></i> Joined</span>
+                            <span>{{ user.date_joined|date:"F j, Y" }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">My Adoptions</h4>
+                </div>
+                <div class="card-body">
+                    {% if adoptions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Pet</th>
+                                        <th>Adoption Date</th>
+                                        <th>Payment Method</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in adoptions %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="{{ payment.pet.image.url }}" alt="{{ payment.pet.name }}" class="rounded me-2" style="width: 50px; height: 50px; object-fit: cover;">
+                                                <div>
+                                                    <h6 class="mb-0">{{ payment.pet.name }}</h6>
+                                                    <small class="text-muted">{{ payment.pet.breed }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ payment.created_at|date:"F j, Y" }}</td>
+                                        <td>{{ payment.get_payment_method_display }}</td>
+                                        <td>
+                                            {% if payment.payment_status == 'COMPLETED' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif payment.payment_status == 'PENDING' or payment.payment_status == 'INITIATED' %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% elif payment.payment_status == 'FAILED' %}
+                                                <span class="badge bg-danger">Failed</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ payment.get_payment_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'breed_finder:pet_detail' payment.pet.id %}" class="btn btn-sm btn-outline-primary">View Pet</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-paw fa-4x text-muted mb-3"></i>
+                            <h5>No adoptions yet</h5>
+                            <p class="text-muted">You haven't adopted any pets yet.</p>
+                            <a href="{% url 'breed_finder:pet_list' %}" class="btn btn-primary mt-3">Browse Available Pets</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        margin-bottom: 1.5rem;
+    }
+    .card-header {
+        font-weight: 500;
+    }
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+    }
+    .badge {
+        font-weight: 500;
+        padding: 0.5em 0.75em;
+    }
+</style>
+{% endblock %}

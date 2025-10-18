@@ -1,0 +1,17 @@
+{% extends 'breed_finder/base.html' %}
+
+{% block title %}Verification Success - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body text-center">
+                <h2 class="card-title text-success">Email Verified Successfully!</h2>
+                <p class="card-text">Your account has been successfully verified. You can now use all features of Dog Breed Finder.</p>
+                <a href="{% url 'breed_finder:landing' %}" class="btn btn-primary">Go to Homepage</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

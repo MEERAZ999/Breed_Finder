@@ -1,0 +1,27 @@
+{% extends 'breed_finder/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10 col-sm-12 px-3">
+        <div class="card my-4">
+            <div class="card-header">
+                <h2 class="text-center mb-0">Create Account</h2>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Register</button>
+                    </div>
+                </form>
+                <hr>
+                <p class="text-center">Already have an account? <a href="{% url 'breed_finder:login' %}">Login here</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

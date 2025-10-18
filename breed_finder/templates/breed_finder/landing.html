@@ -1,0 +1,145 @@
+{% extends 'breed_finder/base.html' %}
+
+{% block title %}Home - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .breed-card, .pet-card {
+        transition: transform 0.3s;
+        height: 100%;
+    }
+    .breed-card:hover, .pet-card:hover {
+        transform: translateY(-5px);
+    }
+    .breed-image, .pet-image {
+        height: 200px;
+        object-fit: cover;
+    }
+    .chatbot-button {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+    }
+    @media (max-width: 576px) {
+        .chatbot-button {
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+        }
+        .section-title {
+            margin-bottom: 1.5rem;
+        }
+        .breed-image, .pet-image {
+            height: 180px;
+        }
+    }
+    .section-title {
+        position: relative;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+    }
+    .section-title::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        transform: translateX(-50%);
+        width: 50px;
+        height: 3px;
+        background-color: #007bff;
+    }
+    .status-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Available Pets Section -->
+<div class="container mb-5">
+    <h2 class="text-center section-title">Available for Adoption</h2>
+    
+    <div class="row g-4 mb-5">
+        {% for pet in pets %}
+        <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+            <div class="card pet-card h-100 shadow-sm">
+                <div class="position-relative">
+                    {% if pet.image %}
+                    <img src="{{ pet.image.url }}" class="card-img-top pet-image w-100" alt="{{ pet.name }}">
+                    {% endif %}
+                    <span class="badge bg-success status-badge">Available</span>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ pet.name }}</h5>
+                    <p class="card-text">
+                        <strong>Breed:</strong> {{ pet.breed }}<br>
+                        <strong>Age:</strong> {{ pet.age_display }}<br>
+                        <strong>Gender:</strong> {{ pet.get_gender_display }}
+                    </p>
+                    <p class="card-text flex-grow-1">{{ pet.description|truncatewords:20 }}</p>
+                    <a href="{% url 'breed_finder:pet_detail' pet.id %}" class="btn btn-primary w-100 mt-auto">Meet {{ pet.name }}</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center">
+            <p class="lead">No pets are currently available for adoption. Please check back soon!</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if show_view_all or pets|length >= 6 %}
+    <div class="text-center">
+        <a href="{% url 'breed_finder:pet_list' %}" class="btn btn-outline-primary btn-lg">View All Pets</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Popular Breeds Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center section-title">Popular Dog Breeds</h2>
+        
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                <div class="card breed-card h-100 shadow-sm">
+                    <img src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e" class="card-img-top breed-image w-100" alt="Chihuahua">
+                    <div class="card-body">
+                        <h5 class="card-title">Chihuahua</h5>
+                        <p class="card-text">Small but mighty, Chihuahuas are known for their loyalty and big personalities.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                <div class="card breed-card h-100 shadow-sm">
+                    <img src="https://images.unsplash.com/photo-1518378188025-22bd89516ee2" class="card-img-top breed-image w-100" alt="French Bulldog">
+                    <div class="card-body">
+                        <h5 class="card-title">French Bulldog</h5>
+                        <p class="card-text">Friendly and adaptable, Frenchies make perfect companions for city living.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                <div class="card breed-card h-100 shadow-sm">
+                    <img src="https://images.unsplash.com/photo-1591769225440-811ad7d6eab3" class="card-img-top breed-image w-100" alt="Pug">
+                    <div class="card-body">
+                        <h5 class="card-title">Pug</h5>
+                        <p class="card-text">Charming and loving, Pugs are known for their wrinkled faces and playful nature.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chatbot Button -->
+<a href="{% url 'breed_finder:chatbot' %}" class="btn btn-primary btn-lg chatbot-button shadow">
+    <i class="bi bi-chat-dots"></i> <span class="d-none d-sm-inline">Dog Breed Finder</span><span class="d-inline d-sm-none">Chat</span>
+</a>
+{% endblock %}

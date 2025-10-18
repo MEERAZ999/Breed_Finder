@@ -1,0 +1,245 @@
+{% extends 'payment/base.html' %}
+{% load static %}
+
+{% block title %}Payment - {{ pet.name }}{% endblock %}
+
+{% block head %}
+<!-- eSewa JavaScript Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/hmac-sha256.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/enc-base64.min.js"></script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .pet-details {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #eee;
+    }
+    .pet-image {
+        width: 200px;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 10px;
+    }
+    .pet-info h2 {
+        margin-top: 0;
+        color: #333;
+    }
+    .payment-methods {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    .payment-button {
+        padding: 1rem;
+        border: 2px solid #eee;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+    }
+    .payment-button:hover {
+        border-color: #007bff;
+        transform: translateY(-2px);
+    }
+    .payment-button img {
+        height: 30px;
+        width: auto;
+    }
+    .loading-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.9);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payment-container">
+    <div class="pet-details">
+        <img src="{{ pet.image.url }}" alt="{{ pet.name }}" class="pet-image">
+        <div class="pet-info">
+            <h2>{{ pet.name }}</h2>
+            <p><strong>Breed:</strong> {{ pet.breed }}</p>
+            <p><strong>Age:</strong> {{ pet.age }} years</p>
+            <p><strong>Adoption Fee:</strong> NPR {{ payment.amount }}</p>
+        </div>
+    </div>
+
+    <h3>Choose Payment Method</h3>
+    <div class="payment-methods">
+        <button onclick="initiateKhaltiPayment()" class="payment-button">
+            <img src="{% static 'payment/images/khalti-logo.svg' %}" alt="Khalti">
+            Pay with Khalti
+        </button>
+        <button onclick="initiateEsewaPayment()" class="payment-button">
+            <img src="{% static 'payment/images/esewa-logo.svg' %}" alt="eSewa">
+            Pay with eSewa
+        </button>
+    </div>
+</div>
+
+<div class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p>Processing payment...</p>
+</div>
+
+<form id="esewa-form" method="POST" action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" style="display: none;">
+    <input type="hidden" name="amount" value="{{ payment.amount }}">
+    <input type="hidden" name="tax_amount" value="0">
+    <input type="hidden" name="total_amount" value="{{ payment.amount }}">
+    <input type="hidden" name="transaction_uuid" value="{{ payment.transaction_uuid }}">
+    <input type="hidden" name="product_code" value="{{ esewa_product_code }}">
+    <input type="hidden" name="product_service_charge" value="0">
+    <input type="hidden" name="product_delivery_charge" value="0">
+    <input type="hidden" name="success_url" value="{{ esewa_success_url }}">
+    <input type="hidden" name="failure_url" value="{{ esewa_failure_url }}">
+    <input type="hidden" name="signed_field_names" value="total_amount,transaction_uuid,product_code">
+    <input type="hidden" id="esewa-signature" name="signature" value="">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showLoading() {
+    document.querySelector('.loading-overlay').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.querySelector('.loading-overlay').style.display = 'none';
+}
+
+function initiateKhaltiPayment() {
+    showLoading();
+    fetch('{% url "payment:khalti_verify" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            payment_id: '{{ payment.id }}'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.payment_url;
+        } else {
+            alert('Payment initiation failed: ' + (data.message || 'Unknown error'));
+            hideLoading();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to initiate payment. Please try again.');
+        hideLoading();
+    });
+}
+
+function initiateEsewaPayment() {
+    // Show loading overlay
+    showLoading();
+    
+    // Get values from form
+    const totalAmount = document.querySelector('input[name="total_amount"]').value;
+    const transactionUuid = document.querySelector('input[name="transaction_uuid"]').value;
+    const productCode = document.querySelector('input[name="product_code"]').value;
+    
+    // Create message string for signature - using format required by eSewa v2 API
+    const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`;
+    
+    console.log('Generating signature for message:', message);
+    
+    // Get the signature from server for eSewa v2 API
+    fetch('{% url "payment:get_esewa_signature" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            message: message,
+            api_version: 'v2',
+            payment_id: '{{ payment.id }}'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Signature generated successfully:', data.signature);
+            
+            // If the message was updated (new transaction UUID), update the form fields
+            if (data.message) {
+                // Parse the message to extract updated values
+                const messageParts = data.message.split(',');
+                messageParts.forEach(part => {
+                    const [key, value] = part.split('=');
+                    if (key === 'transaction_uuid') {
+                        // Update the transaction_uuid in the form
+                        document.querySelector('input[name="transaction_uuid"]').value = value;
+                        console.log('Updated transaction_uuid to:', value);
+                    } else if (key === 'total_amount') {
+                        // Update the total_amount in the form
+                        document.querySelector('input[name="total_amount"]').value = value;
+                        document.querySelector('input[name="amount"]').value = value;
+                        console.log('Updated amount to:', value);
+                    }
+                });
+            }
+            
+            // Set the signature in the form
+            document.getElementById('esewa-signature').value = data.signature;
+            // Submit the form
+            document.getElementById('esewa-form').submit();
+        } else {
+            console.error('Error generating signature:', data.error);
+            alert('Error generating signature: ' + data.error);
+            hideLoading();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to generate signature. Please try again.');
+        hideLoading();
+    });
+}
+</script>
+{% endblock %}

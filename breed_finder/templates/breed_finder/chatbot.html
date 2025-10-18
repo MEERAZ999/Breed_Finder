@@ -1,0 +1,646 @@
+{% extends 'breed_finder/base.html' %}
+
+{% block title %}Chatbot - {{ block.super }}{% endblock title %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #f8f9fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+    }
+
+    .chat-container {
+        width: 100%;
+        max-width: 700px;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        height: 90vh;
+        overflow: hidden;
+        margin: 15px;
+    }
+
+    .chat-header {
+        background-color: #007bff;
+        color: white;
+        padding: 15px;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        text-align: center;
+        font-size: 1.25rem;
+    }
+
+    .chat-history {
+        flex-grow: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background-color: #e9ecef;
+    }
+
+    .message-bubble {
+        max-width: 80%;
+        padding: 10px 15px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+        word-wrap: break-word;
+    }
+
+    .message-bubble.user {
+        background-color: #007bff;
+        color: white;
+        align-self: flex-end;
+        margin-left: auto;
+        border-bottom-right-radius: 5px;
+    }
+
+    .message-bubble.ai {
+        background-color: #6c757d;
+        color: white;
+        align-self: flex-start;
+        margin-right: auto;
+        border-bottom-left-radius: 5px;
+    }
+
+    .chat-input-area {
+        display: flex;
+        padding: 15px;
+        border-top: 1px solid #dee2e6;
+        background-color: #f1f1f1;
+        align-items: center;
+    }
+
+    .chat-input-area input[type="text"] {
+        flex-grow: 1;
+        border-radius: 20px;
+        padding: 10px 15px;
+        border: 1px solid #ced4da;
+        margin-right: 10px;
+    }
+
+    .chat-input-area button {
+        border-radius: 20px;
+        padding: 10px 20px;
+    }
+
+    .image-upload-btn {
+        margin-right: 10px;
+    }
+
+    .thumbnail-preview {
+        max-width: 100px;
+        max-height: 100px;
+        border-radius: 5px;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    @media (max-width: 576px) {
+        .chat-container {
+            height: 80vh;
+            margin: 10px;
+        }
+        
+        .chat-input-area {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .chat-input-area input[type="text"] {
+            width: 100%;
+            margin-right: 0;
+            order: 1;
+        }
+        
+        .btn-controls {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            order: 2;
+        }
+        
+        .image-upload-btn, .send-button {
+            flex: 1;
+            margin: 0 5px;
+        }
+        
+        .thumbnail-preview {
+            max-width: 80%;
+            height: auto;
+        }
+    }
+
+    .loading-indicator {
+        text-align: center;
+        padding: 10px;
+        font-style: italic;
+        color: #6c757d;
+    }
+    
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        margin-left: 10px;
+        border-radius: 10px;
+    }
+    
+    .bg-light {
+        background-color: #f8f9fa !important;
+    }
+    
+    .text-dark {
+        color: #343a40 !important;
+    }
+</style>
+<div class="chat-container">
+    <div class="chat-header">
+        Dog Breed Finder {% if dog_count %}<span class="badge bg-light text-dark">{{ dog_count }} dogs available</span>{% endif %}
+    </div>
+    <div class="chat-history" id="chat-history">
+        <!-- Chat messages will be appended here -->
+    </div>
+    <div class="chat-input-area">
+        <input type="file" id="image-upload" accept="image/jpeg, image/png" style="display: none;">
+        <input type="text" id="user-input" placeholder="Ask about a dog breed or upload an image...">
+        <div class="btn-controls">
+            <button class="btn btn-secondary image-upload-btn" onclick="document.getElementById('image-upload').click();">Upload Image</button>
+            <button class="btn btn-primary send-button" id="send-button">Send</button>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatHistory = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const imageUpload = document.getElementById('image-upload');
+        const OLLAMA_API_URL = 'http://localhost:11434/api/generate';
+        const OLLAMA_LIST_URL = 'http://localhost:11434/api/tags';
+        const SYSTEM_PROMPT = "You are a dog breed expert. Given a description, identify the breed of the dog accurately. If unsure, ask for more info. Provide detailed information about the breed including temperament, size, care needs, and common health issues.";
+
+        let uploadedImageBase64 = null;
+        let llavaAvailable = false;
+        let visionModelsAvailable = [];
+        let visionModelStatus = 'unknown';
+        
+        // Check if LLaVA model is available
+        async function checkLLaVAAvailability() {
+            try {
+                console.log('Checking LLaVA availability...');
+                const response = await fetch(OLLAMA_LIST_URL);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Ollama models response:', JSON.stringify(data));
+                    
+                    // Extract models list based on API response format
+                    let modelsList = [];
+                    if (Array.isArray(data.models)) {
+                        modelsList = data.models;
+                        console.log('Found models in data.models array');
+                    } else if (Array.isArray(data)) {
+                        modelsList = data;
+                        console.log('Found models in direct array');
+                    }
+                    
+                    // Log all available models for debugging
+                    const modelNames = modelsList.map(model => model.name || 'unnamed');
+                    console.log('Available models:', JSON.stringify(modelNames));
+                    
+                    // Check for LLaVA model
+                    const llavaModels = modelsList.filter(model => model.name && model.name.toLowerCase().includes('llava'));
+                    llavaAvailable = llavaModels.length > 0;
+                    
+                    // Check for any vision models
+                    visionModelsAvailable = modelsList.filter(model => 
+                        model.name && (
+                            model.name.toLowerCase().includes('llava') || 
+                            model.name.toLowerCase().includes('bakllava') || 
+                            model.name.toLowerCase().includes('moondream') || 
+                            model.name.toLowerCase().includes('cogvlm')
+                        )
+                    ).map(model => model.name);
+                    
+                    // Check if any models are in 'pulling' state
+                    const pullingModels = modelsList.filter(model => 
+                        model.status === 'pulling' && (
+                            model.name.toLowerCase().includes('llava') || 
+                            model.name.toLowerCase().includes('bakllava') || 
+                            model.name.toLowerCase().includes('moondream') || 
+                            model.name.toLowerCase().includes('cogvlm')
+                        )
+                    );
+                    
+                    if (llavaAvailable) {
+                        console.log('LLaVA model found:', llavaModels[0].name);
+                        visionModelStatus = 'llava_available';
+                    } else if (visionModelsAvailable.length > 0) {
+                        console.log(`Alternative vision models available: ${visionModelsAvailable.join(', ')}`);
+                        visionModelStatus = 'other_vision_available';
+                    } else if (pullingModels.length > 0) {
+                        const pullingModel = pullingModels[0].name;
+                        console.log(`${pullingModel} model is currently downloading...`);
+                        visionModelStatus = 'downloading';
+                    } else {
+                        console.log('No LLaVA model found in available models. All models:', JSON.stringify(modelNames));
+                        console.log('Available vision models:', JSON.stringify(visionModelsAvailable));
+                        visionModelStatus = 'none_available';
+                    }
+                } else {
+                    console.error('Failed to fetch models list, status:', response.status);
+                    visionModelStatus = 'error';
+                }
+            } catch (error) {
+                console.error('Error checking LLaVA availability:', error);
+                visionModelStatus = 'error';
+            }
+            return llavaAvailable;
+        }
+        
+        // Check LLaVA availability on page load and force refresh
+            (async function() {
+                await checkLLaVAAvailability();
+                console.log('Initial LLaVA check complete, availability:', llavaAvailable);
+                
+                // Update UI with vision model status
+                if (visionModelStatus === 'llava_available') {
+                    console.log('LLaVA is available on page load');
+                    setTimeout(() => {
+                        addMessage('ai', "The LLaVA image analysis model is ready! You can upload dog images for accurate breed identification.");
+                    }, 1000);
+                } else if (visionModelStatus === 'other_vision_available') {
+                    console.log('Alternative vision model is available on page load');
+                    setTimeout(() => {
+                        addMessage('ai', `A vision model is ready! You can upload dog images for breed identification.`);
+                    }, 1000);
+                }
+            })();
+        
+        // Periodically check for vision model availability
+        let lastVisionStatus = visionModelStatus;
+        setInterval(async () => {
+            const previousStatus = lastVisionStatus;
+            await checkLLaVAAvailability();
+            const currentStatus = visionModelStatus;
+            lastVisionStatus = currentStatus;
+            
+            // Notify user when vision model status changes
+            if (previousStatus !== 'llava_available' && previousStatus !== 'other_vision_available' && 
+                (currentStatus === 'llava_available' || currentStatus === 'other_vision_available')) {
+                console.log('Vision model became available during session');
+                if (currentStatus === 'llava_available') {
+                    addMessage('ai', "Good news! The LLaVA image analysis model is now ready. You can upload dog images for accurate breed identification.");
+                } else {
+                    addMessage('ai', `Good news! A vision model (${visionModelsAvailable[0]}) is now ready. You can upload dog images for breed identification.`);
+                }
+            }
+        }, 60000); // Check every minute
+        
+        // Add welcome message
+        setTimeout(() => {
+            addMessage('ai', 'Welcome to the Dog Breed Expert! I can help you identify dog breeds from images or descriptions and provide detailed information about different breeds. Simply upload a photo of a dog or ask me about specific breeds!');
+        }, 500);
+
+        function addMessage(sender, message, imageUrl = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message-bubble');
+            messageDiv.classList.add(sender);
+
+            if (imageUrl) {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.classList.add('thumbnail-preview');
+                messageDiv.appendChild(img);
+            }
+
+            const textNode = document.createTextNode(message);
+            messageDiv.appendChild(textNode);
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function showLoadingIndicator() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.classList.add('loading-indicator');
+            loadingDiv.id = 'loading-indicator';
+            loadingDiv.textContent = 'Thinking...';
+            chatHistory.appendChild(loadingDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function removeLoadingIndicator() {
+            const loadingDiv = document.getElementById('loading-indicator');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message && !uploadedImageBase64) return;
+
+            if (message) {
+                addMessage('user', message);
+            }
+
+            const imageData = uploadedImageBase64;
+            userInput.value = '';
+            uploadedImageBase64 = null;
+            showLoadingIndicator();
+
+            try {
+                if (imageData) {
+                    try {
+                        console.log('Processing image...');
+                        addMessage('user', null, imageData);
+
+                        // Check LLaVA availability again before processing
+                        await checkLLaVAAvailability();
+                        
+                        // Use Ollama's API for image analysis
+                        let payload = {};
+                        let selectedModel = null;
+                        
+                        // Define the dog breed identification prompt
+                        const dogBreedPrompt = "You are a dog breed identification expert. Your task is to analyze this image and identify the EXACT breed of dog shown with high confidence. Be very specific and precise with the breed name. First, state the breed name clearly. Then provide detailed information about this specific breed including: distinctive physical characteristics, temperament traits, typical size and weight, special care requirements, and common health issues. If you're not 100% certain about the breed, list the top 2-3 most likely breeds in order of probability and explain your reasoning based on the specific visual characteristics visible in this image such as coat type, color pattern, ear shape, muzzle length, body structure, and any distinctive markings.";
+                        
+                        if (llavaAvailable) {
+                            // Use LLaVA model for image analysis if available
+                            selectedModel = "llava";
+                            payload = {
+                                model: selectedModel,
+                                prompt: dogBreedPrompt,
+                                stream: false,
+                                images: [imageData]
+                            };
+                            console.log('Using LLaVA model for image analysis - model is confirmed available');
+                        } else if (visionModelsAvailable.length > 0) {
+                            // Use the first available vision model
+                            selectedModel = visionModelsAvailable[0];
+                            payload = {
+                                model: selectedModel,
+                                prompt: dogBreedPrompt,
+                                stream: false,
+                                images: [imageData]
+                            };
+                            console.log(`Using alternative vision model: ${selectedModel} for image analysis - this model supports image processing`);
+                        } else {
+                            // If no vision models are available, try to find one more time
+                            try {
+                                const modelResponse = await fetch(OLLAMA_LIST_URL);
+                                const modelData = await modelResponse.json();
+                                const models = Array.isArray(modelData.models) ? modelData.models : modelData;
+                                const visionModels = models.filter(model => 
+                                    model.name && (
+                                        model.name.includes('llava') || 
+                                        model.name.includes('bakllava') || 
+                                        model.name.includes('moondream') || 
+                                        model.name.includes('cogvlm')
+                                    )
+                                );
+                                
+                                if (visionModels.length > 0) {
+                                    // Use the first available vision model
+                                    selectedModel = visionModels[0].name;
+                                    payload = {
+                                        model: selectedModel,
+                                        prompt: dogBreedPrompt,
+                                        stream: false,
+                                        images: [imageData]
+                                    };
+                                    console.log(`Found vision model on second attempt: ${selectedModel} for image analysis`);
+                                } else {
+                                    // Fall back to gemma3:4b if no vision models are available
+                                    selectedModel = "gemma3:4b";
+                                    payload = {
+                                        model: selectedModel,
+                                        prompt: "I'm trying to identify a dog breed from an image, but I can't process images directly. Please provide information about common dog breeds including their distinctive features, temperament, size, care needs, and health issues.",
+                                        system: SYSTEM_PROMPT,
+                                        stream: false
+                                    };
+                                    console.log('No vision models available, falling back to text-only model');
+                                }
+                            } catch (error) {
+                                // Fall back to gemma3:4b if there's an error checking models
+                                selectedModel = "gemma3:4b";
+                                payload = {
+                                    model: selectedModel,
+                                    prompt: "I'm trying to identify a dog breed from an image, but I can't process images directly. Please provide information about common dog breeds including their distinctive features, temperament, size, care needs, and health issues.",
+                                    system: SYSTEM_PROMPT,
+                                    stream: false
+                                };
+                                console.log('Error checking for vision models, falling back to text-only model');
+                            }
+                        }
+
+                        // No need to add images here as it's already handled in the payload creation
+                        
+                        const response = await fetch(OLLAMA_API_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`API error: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        removeLoadingIndicator();
+                        addMessage('ai', data.response);
+                        return;
+                    } catch (imageError) {
+                        console.error('Image processing error:', imageError);
+                        removeLoadingIndicator();
+                        
+                        // Try again with a different approach
+                        try {
+                            console.log('Retrying with alternative approach after error...');
+                            
+                            // Check LLaVA availability again
+                            await checkLLaVAAvailability();
+                            
+                            if (llavaAvailable) {
+                                // If LLaVA is available but we got an error, try with a simpler prompt
+                                console.log('LLaVA is available, retrying with simpler prompt for better results');
+                                const retryPayload = {
+                                    model: "llava",
+                                    prompt: "What specific breed of dog is shown in this image? Be very precise with the breed name. First, clearly state the exact breed name. Then briefly describe the key physical characteristics that identify this breed. If you're not certain, list the 2-3 most likely breeds in order of probability.",
+                                    stream: false,
+                                    images: [imageData]
+                                };
+                                
+                                const retryResponse = await fetch(OLLAMA_API_URL, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify(retryPayload)
+                                });
+                                
+                                if (retryResponse.ok) {
+                                    const retryData = await retryResponse.json();
+                                    addMessage('ai', retryData.response);
+                                    return;
+                                }
+                            }
+                            
+                            // If LLaVA retry failed or LLaVA is not available, check for other vision models
+                            const modelResponse = await fetch(OLLAMA_LIST_URL);
+                            const modelData = await modelResponse.json();
+                            const models = Array.isArray(modelData.models) ? modelData.models : modelData;
+                            
+                            // Look for any vision model that might work
+                            const allModels = models.map(model => model.name);
+                            console.log('Available models for retry:', allModels);
+                            
+                            // Try with gemma3:4b as a last resort
+                            const fallbackPayload = {
+                                model: "gemma3:4b",
+                                prompt: "I'm trying to identify a dog breed from an image. Please help me identify what breed this dog might be based on common characteristics. Provide detailed information about popular dog breeds including temperament, size, care needs, and common health issues.",
+                                system: SYSTEM_PROMPT,
+                                stream: false
+                            };
+                            
+                            const fallbackResponse = await fetch(OLLAMA_API_URL, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(fallbackPayload)
+                            });
+                            
+                            if (fallbackResponse.ok) {
+                                const fallbackData = await fallbackResponse.json();
+                                addMessage('ai', "I encountered an issue analyzing your specific image. Please try uploading a clearer image of the dog, preferably one that shows the full body and face clearly. In the meantime, here's some information about common dog breeds: " + fallbackData.response);
+                            } else {
+                                // If all else fails
+                                addMessage('ai', "I'm having trouble analyzing your image. Please try uploading a clearer image of the dog, preferably one that shows the full body and face clearly. This will help me identify the breed more accurately.");
+                            }
+                        } catch (fallbackError) {
+                            console.error('Fallback error:', fallbackError);
+                            addMessage('ai', "I'm having trouble analyzing your image. Please try uploading a clearer image of the dog, preferably one that shows the full body and face clearly. This will help me identify the breed more accurately.");
+                        }
+                        return;
+                    }
+                    
+                    // Check if the response contains an error message about the model
+                    if (data.response && (data.response.includes("model not found") || data.response.includes("error"))) {
+                        removeLoadingIndicator();
+                        console.log('Model error detected, trying alternative approach...');
+                        
+                        try {
+                            // Try with gemma3:4b as a fallback for general dog breed information
+                            const fallbackPayload = {
+                                model: "gemma3:4b",
+                                prompt: "I need information about popular dog breeds. Please provide details about the most common dog breeds including their appearance, temperament, size, care needs, and common health issues. Focus on breeds that are frequently seen as pets.",
+                                system: SYSTEM_PROMPT,
+                                stream: false
+                            };
+                            
+                            const fallbackResponse = await fetch(OLLAMA_API_URL, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(fallbackPayload)
+                            });
+                            
+                            if (fallbackResponse.ok) {
+                                const fallbackData = await fallbackResponse.json();
+                                if (!llavaAvailable && payload.model.includes("llava")) {
+                                    addMessage('ai', "I'm currently unable to analyze your image directly because the required vision model is still being downloaded. Here's some general information about common dog breeds that might help: " + fallbackData.response);
+                                } else {
+                                    addMessage('ai', "I encountered an issue analyzing your image, but I can provide some general information about dog breeds that might be helpful: " + fallbackData.response);
+                                }
+                            } else {
+                                // If fallback also fails
+                                if (!llavaAvailable && payload.model.includes("llava")) {
+                                    addMessage('ai', "I'm currently unable to analyze images directly. The required vision model is still being downloaded. Please try again in a few minutes or upload a different image.");
+                                } else {
+                                    addMessage('ai', "I encountered an error while processing your image. Please try uploading a different image or try again later when our systems have fully initialized.");
+                                }
+                            }
+                        } catch (fallbackError) {
+                            console.error('Fallback error:', fallbackError);
+                            addMessage('ai', "I encountered an error while processing your request. Our systems might be initializing or experiencing temporary issues. Please try again in a few minutes.");
+                        }
+                        return;
+                    }
+                }
+
+                // Text-based breed identification
+                let payload = {
+                    model: "gemma3:4b",
+                    prompt: `Based on this description, identify the most likely dog breed(s): ${message}. Please provide detailed information about the breed including temperament, size, care needs, and common health issues. If multiple breeds match the description, list them in order of likelihood and explain why.`,
+                    system: SYSTEM_PROMPT,
+                    stream: false
+                };
+
+                const response = await fetch(OLLAMA_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                removeLoadingIndicator();
+                addMessage('ai', data.response);
+            } catch (error) {
+                console.error('Error:', error);
+                removeLoadingIndicator();
+                addMessage('ai', 'Sorry, I encountered an error while processing your request. Please try again.');
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        imageUpload.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check LLaVA availability before processing the image
+                await checkLLaVAAvailability();
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImageBase64 = e.target.result;
+                    // Don't add the message here, it will be added in sendMessage
+                    // Just show a notification that the image is ready to be sent
+                    if (llavaAvailable) {
+                        userInput.placeholder = "Image selected. Click Send to analyze with LLaVA...";
+                    } else {
+                        userInput.placeholder = "Image selected. Click Send to analyze (using available models)...";
+                    }
+                    
+                    // Automatically send the message with the image after a short delay
+                    setTimeout(() => {
+                        sendMessage();
+                    }, 500);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    });
+</script>
+{% endblock extra_js %}

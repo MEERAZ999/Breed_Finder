@@ -1,0 +1,137 @@
+{% extends 'payment/base.html' %}
+{% load static %}
+
+{% block title %}Payment Failed{% endblock %}
+
+{% block extra_css %}
+<style>
+    .failed-container {
+        max-width: 600px;
+        margin: 4rem auto;
+        padding: 2rem;
+        text-align: center;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .failed-icon {
+        color: #dc3545;
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    .failed-title {
+        color: #dc3545;
+        margin-bottom: 1rem;
+    }
+    .failed-message {
+        color: #666;
+        margin-bottom: 2rem;
+    }
+    .troubleshooting {
+        text-align: left;
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    .troubleshooting h3 {
+        color: #495057;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+    .troubleshooting ul {
+        color: #666;
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+    .troubleshooting li {
+        margin-bottom: 0.5rem;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+        border: none;
+    }
+    .btn-danger:hover {
+        background: #c82333;
+        transform: translateY(-2px);
+    }
+    .btn-outline {
+        border: 2px solid #6c757d;
+        color: #6c757d;
+        background: transparent;
+    }
+    .btn-outline:hover {
+        background: #6c757d;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="failed-container">
+    <i class="fas fa-times-circle failed-icon"></i>
+    <h1 class="failed-title">Payment Failed</h1>
+    <p class="failed-message">We're sorry, but there was a problem processing your payment.</p>
+    
+    {% if error_message %}
+    <div class="alert alert-danger">
+        <strong>Error details:</strong> {{ error_message }}
+    </div>
+    {% endif %}
+    
+    {% if note %}
+    <div class="alert alert-warning">
+        <strong>Note:</strong> {{ note }}
+    </div>
+    {% endif %}
+    
+    {% if payment %}
+    <div class="alert alert-info">
+        <strong>Payment ID:</strong> {{ payment.id }}<br>
+        <strong>Transaction UUID:</strong> {{ payment.transaction_uuid }}<br>
+        <strong>Status:</strong> {{ payment.payment_status }}<br>
+        {% if payment.pet %}
+        <strong>Pet:</strong> {{ payment.pet.name }}<br>
+        <strong>Amount:</strong> NPR {{ payment.amount }}
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="troubleshooting">
+        <h3>Common Issues:</h3>
+        <ul>
+            <li>Insufficient funds in your account</li>
+            <li>Payment gateway timeout</li>
+            <li>Network connectivity issues</li>
+            <li>Incorrect payment details</li>
+        </ul>
+    </div>
+
+    <div class="action-buttons">
+        <a href="javascript:history.back()" class="btn btn-danger">Try Again</a>
+        <a href="{% url 'breed_finder:landing' %}" class="btn btn-outline">Return to Home</a>
+    </div>
+
+    {% if messages %}
+    <div class="error-details mt-4">
+        {% for message in messages %}
+        <p class="text-danger">{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

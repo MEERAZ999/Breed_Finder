@@ -1,0 +1,64 @@
+{% extends 'breed_finder/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Pet Listings</h2>
+    </div>
+    
+    <!-- Search Bar -->
+    <div class="row mb-4">
+        <div class="col-md-6 mx-auto">
+            <form method="GET" action="{% url 'breed_finder:pet_list' %}" class="d-flex">
+                <input type="text" name="search" class="form-control" placeholder="Search by breed..." value="{{ search_query }}">
+                <button type="submit" class="btn btn-primary ms-2">Search</button>
+                {% if search_query %}
+                <a href="{% url 'breed_finder:pet_list' %}" class="btn btn-outline-secondary ms-2">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    
+    {% if search_query %}
+    <div class="alert alert-info">
+        Showing results for: <strong>{{ search_query }}</strong>
+        <span class="badge bg-secondary ms-2">{{ pets|length }} found</span>
+    </div>
+    {% endif %}
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+        {% for pet in pets %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                {% if pet.image %}
+                <img src="{{ pet.image.url }}" class="card-img-top" alt="{{ pet.name }}" style="height: 200px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ pet.name }}</h5>
+                    <p class="card-text">
+                        <strong>Breed:</strong> {{ pet.breed }} <br>
+                        <span class="text-muted small">({{ pet.breed_available }} available out of {{ pet.breed_total }} total)</span><br>
+                        <strong>Age:</strong> {{ pet.age_display }}<br>
+                        <strong>Gender:</strong> {{ pet.get_gender_display }}<br>
+                        <strong>Status:</strong> 
+                        <span class="badge {% if pet.status == 'AVAILABLE' %}bg-success{% elif pet.status == 'PENDING' %}bg-warning{% else %}bg-secondary{% endif %}">
+                            {{ pet.get_status_display }}
+                        </span>
+                    </p>
+                    <p class="card-text">{{ pet.description|truncatewords:30 }}</p>
+                </div>
+                <div class="card-footer bg-transparent border-top-0">
+                    <div class="d-flex justify-content-center">
+                        <a href="{% url 'breed_finder:pet_detail' pet.id %}" class="btn btn-outline-primary">View Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center">
+            <p class="lead">No pets available at the moment.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

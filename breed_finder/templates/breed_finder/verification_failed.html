@@ -1,0 +1,18 @@
+{% extends 'breed_finder/base.html' %}
+
+{% block title %}Verification Failed - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body text-center">
+                <h2 class="card-title text-danger">Verification Failed</h2>
+                <p class="card-text">Sorry, we couldn't verify your email. The verification link may be invalid or expired.</p>
+                <p class="card-text">Please try registering again or contact support if the problem persists.</p>
+                <a href="{% url 'breed_finder:register' %}" class="btn btn-primary">Register Again</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eSewa Test Form</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #60bb46;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #4e9e3a;
+        }
+        .info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #17a2b8;
+            padding: 10px 15px;
+            margin: 20px 0;
+        }
+        #signatureOutput {
+            word-break: break-all;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>eSewa Test Form</h1>
+    
+    <div class="info">
+        <h3>Test Credentials</h3>
+        <p><strong>eSewa ID:</strong> 9806800001 (or 9806800002/3/4/5)</p>
+        <p><strong>Password:</strong> Nepal@123</p>
+    </div>
+
+    <div class="container">
+        <h2>Generate Signature</h2>
+        <div class="form-group">
+            <label for="amount">Amount (NPR)</label>
+            <input type="number" id="amount" value="1000">
+        </div>
+        <div class="form-group">
+            <label for="merchantCode">Merchant Code</label>
+            <input type="text" id="merchantCode" value="EPAYTEST">
+        </div>
+        <div class="form-group">
+            <label for="secretKey">Secret Key</label>
+            <input type="text" id="secretKey" value="8gBm/:&EnhH.1/q">
+        </div>
+        <button onclick="generateSignature()">Generate Signature</button>
+        <div class="form-group">
+            <label for="signatureOutput">Generated Signature:</label>
+            <div id="signatureOutput"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Test eSewa Payment</h2>
+        <form id="esewaForm" action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" method="POST">
+            <div class="form-group">
+                <label for="amount">Amount (NPR)</label>
+                <input type="number" name="amount" id="formAmount" value="1000">
+            </div>
+            <input type="hidden" name="tax_amount" value="0">
+            <input type="hidden" name="total_amount" id="formTotalAmount" value="1000">
+            <input type="hidden" name="transaction_uuid" id="formTransactionUuid">
+            <input type="hidden" name="product_code" id="formProductCode" value="EPAYTEST">
+            <input type="hidden" name="product_service_charge" value="0">
+            <input type="hidden" name="product_delivery_charge" value="0">
+            <input type="hidden" name="success_url" value="http://127.0.0.1:8001/payment/success/?payment_id=1">
+            <input type="hidden" name="failure_url" value="http://127.0.0.1:8001/payment/failed/?payment_id=1">
+            <input type="hidden" name="signed_field_names" value="total_amount,transaction_uuid,product_code">
+            <input type="hidden" name="signature" id="formSignature">
+            
+            <button type="button" onclick="submitEsewaForm()">Pay with eSewa</button>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        // Generate a UUID
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Generate HMAC-SHA256 signature
+        function generateSignature() {
+            const amount = document.getElementById('amount').value;
+            const merchantCode = document.getElementById('merchantCode').value;
+            const secretKey = document.getElementById('secretKey').value;
+            const transactionUuid = generateUUID();
+            
+            const message = `total_amount=${amount},transaction_uuid=${transactionUuid},product_code=${merchantCode}`;
+            
+            // Generate HMAC-SHA256 signature
+            const signature = CryptoJS.HmacSHA256(message, secretKey);
+            const base64Signature = CryptoJS.enc.Base64.stringify(signature);
+            
+            document.getElementById('signatureOutput').textContent = base64Signature;
+            
+            // Update form fields
+            document.getElementById('formAmount').value = amount;
+            document.getElementById('formTotalAmount').value = amount;
+            document.getElementById('formTransactionUuid').value = transactionUuid;
+            document.getElementById('formProductCode').value = merchantCode;
+            document.getElementById('formSignature').value = base64Signature;
+            
+            return {
+                signature: base64Signature,
+                transactionUuid: transactionUuid
+            };
+        }
+
+        // Submit eSewa form
+        function submitEsewaForm() {
+            const result = generateSignature();
+            document.getElementById('esewaForm').submit();
+        }
+
+        // Initialize with a signature on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            generateSignature();
+        });
+    </script>
+</body>
+</html>

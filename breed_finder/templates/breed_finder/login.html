@@ -1,0 +1,30 @@
+{% extends 'breed_finder/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Login - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8 col-sm-10 col-12 px-3">
+        <div class="card my-4">
+            <div class="card-header">
+                <h2 class="text-center mb-0">Login</h2>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </div>
+                    <div class="text-center mt-2">
+                        <a href="{% url 'breed_finder:password_reset' %}">Forgot Password?</a>
+                    </div>
+                </form>
+                <hr>
+                <p class="text-center">Don't have an account? <a href="{% url 'breed_finder:register' %}">Register here</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

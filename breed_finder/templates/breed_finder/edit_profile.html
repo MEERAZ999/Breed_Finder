@@ -1,0 +1,70 @@
+{% extends 'breed_finder/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Profile - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Edit Profile</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Personal Information</h5>
+                                {{ user_form.username|as_crispy_field }}
+                                {{ user_form.email|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Profile Information</h5>
+                                {{ profile_form.phone_number|as_crispy_field }}
+                                {{ profile_form.address|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <h5 class="mb-3">About You</h5>
+                                {{ profile_form.bio|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <h5 class="mb-3">Profile Picture</h5>
+                                {% if user.profile.profile_picture %}
+                                    <div class="mb-3">
+                                        <img src="{{ user.profile.profile_picture.url }}" alt="Current Profile Picture" class="img-thumbnail" style="max-width: 150px;">
+                                        <p class="text-muted mt-2">Current profile picture</p>
+                                    </div>
+                                {% endif %}
+                                {{ profile_form.profile_picture|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'breed_finder:user_profile' %}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .card-header {
+        font-weight: 500;
+    }
+</style>
+{% endblock %}

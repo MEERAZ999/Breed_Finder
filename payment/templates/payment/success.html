@@ -1,0 +1,73 @@
+{% extends 'payment/base.html' %}
+{% load static %}
+
+{% block title %}Payment Successful{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-container {
+        max-width: 600px;
+        margin: 4rem auto;
+        padding: 2rem;
+        text-align: center;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .success-icon {
+        color: #28a745;
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    .success-title {
+        color: #28a745;
+        margin-bottom: 1rem;
+    }
+    .success-message {
+        color: #666;
+        margin-bottom: 2rem;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    .btn-primary {
+        background: #007bff;
+        color: white;
+        border: none;
+    }
+    .btn-primary:hover {
+        background: #0056b3;
+        transform: translateY(-2px);
+    }
+    .btn-outline {
+        border: 2px solid #007bff;
+        color: #007bff;
+        background: transparent;
+    }
+    .btn-outline:hover {
+        background: #007bff;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="success-container">
+    <i class="fas fa-check-circle success-icon"></i>
+    <h1 class="success-title">Payment Successful!</h1>
+    <p class="success-message">Thank you for your payment. Your pet adoption process is now complete. We'll contact you soon with further details.</p>
+    <div class="action-buttons">
+        <a href="{% url 'breed_finder:landing' %}" class="btn btn-primary">Return to Home</a>
+        <a href="{% url 'breed_finder:chatbot' %}" class="btn btn-outline">Go to Chatbot</a>
+    </div>
+</div>
+{% endblock %}

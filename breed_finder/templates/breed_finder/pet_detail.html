@@ -1,0 +1,92 @@
+{% extends 'breed_finder/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-6 col-md-12 mb-4 mb-lg-0">
+            {% if pet.image %}
+            <img src="{{ pet.image.url }}" class="img-fluid rounded shadow w-100" alt="{{ pet.name }}">
+            {% endif %}
+        </div>
+        <div class="col-lg-6 col-md-12">
+            <h2 class="mb-4">{{ pet.name }}</h2>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5 class="text-muted">Pet Details</h5>
+                        <hr>
+                        <p><strong>Breed:</strong> {{ pet.breed }} <span class="text-muted">({{ breed_available }} available out of {{ breed_total }} total)</span></p>
+                        <p><strong>Age:</strong> {{ pet.age_display }}</p>
+                        <p><strong>Gender:</strong> {{ pet.get_gender_display }}</p>
+                        <p><strong>Price:</strong> NPR {{ pet.price }}</p>
+                        <p>
+                            <strong>Status:</strong>
+                            <span class="badge {% if pet.status == 'AVAILABLE' %}bg-success{% elif pet.status == 'PENDING' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                {{ pet.get_status_display }}
+                            </span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5 class="text-muted">Description</h5>
+                        <hr>
+                        <p>{{ pet.description }}</p>
+                    </div>
+
+                    {% if pet.status == 'AVAILABLE' %}
+                    <div class="d-grid gap-2">
+                        <form method="POST" action="{% url 'breed_finder:pet_detail' pet.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="bi bi-heart-fill me-2"></i>Adopt {{ pet.name }}
+                            </button>
+                        </form>
+                        <p class="text-muted text-center mt-2 small">
+                            <i class="bi bi-info-circle"></i>
+                            By clicking adopt, you'll be redirected to our secure payment page
+                        </p>
+                    </div>
+                    {% elif pet.status == 'ADOPTED' %}
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        This pet has already been adopted.
+                    </div>
+                    {% elif pet.status == 'PENDING' %}
+                    <div class="alert alert-warning text-center">
+                        <i class="bi bi-clock me-2"></i>
+                        Adoption for this pet is pending.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="{% url 'breed_finder:pet_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border: none;
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    .btn-primary {
+        transition: all 0.3s;
+    }
+    .btn-primary:hover {
+        transform: scale(1.02);
+    }
+    .img-fluid {
+        border-radius: 15px;
+    }
+</style>
+{% endblock %}
